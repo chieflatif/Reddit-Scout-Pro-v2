@@ -562,10 +562,10 @@ class RedditDashboard:
         
         with col1:
             keywords = st.text_area(
-                "Keywords to search (one per line):",
-                value="artificial intelligence\nmachine learning\nChatGPT",
+                "Keywords to search:",
+                value="Micappital",
                 height=100,
-                help="Enter keywords or phrases to search across all of Reddit"
+                help="Enter keywords to search across all of Reddit. Use one keyword per line for multiple searches, or just one keyword for single search. Examples: 'Micappital', 'fintech', 'investing'"
             )
         
         with col2:
@@ -619,7 +619,8 @@ class RedditDashboard:
                 }
         
         if st.button("🌐 Search Globally", type="primary"):
-            keyword_list = [k.strip() for k in keywords.split('\n') if k.strip()]
+            # Handle both single keywords and multiple keywords (one per line)
+            keyword_list = [k.strip() for k in keywords.replace(',', '\n').split('\n') if k.strip()]
             
             if keyword_list:
                 with st.spinner(f"Searching across all of Reddit for {len(keyword_list)} keywords..."):
@@ -822,6 +823,14 @@ class RedditDashboard:
                             
                     else:
                         st.warning("No results found. Try different keywords or adjust filters.")
+                        st.info("💡 **Tips to find more results:**")
+                        st.markdown("""
+                        - Try different **time ranges** (change from 'week' to 'all' or 'month')
+                        - Use **broader keywords** (e.g., 'invest' instead of specific company names)
+                        - Check **spelling** and try alternative terms
+                        - Lower the **minimum score** filter in Advanced Options
+                        - Try **related terms** or synonyms
+                        """)
             else:
                 st.warning("Please enter at least one keyword to search.")
     
