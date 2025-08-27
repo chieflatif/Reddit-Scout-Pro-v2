@@ -263,21 +263,30 @@ class RedditScout:
                 
                 print(f"  Phase 1 complete: Found {len([d for d in all_discussions if d.get('search_phase') == 'global'])} posts in global search")
                 
-                # 2. TARGETED SUBREDDIT SEARCH - Deep dive into relevant subreddits
+                # 2. ENHANCED GLOBAL SEARCH - Search ALL subreddits with comments
                 if search_comments:
-                    print(f"  Phase 2: Deep subreddit + comment search...")
+                    print(f"  Phase 2: Enhanced search with comments across ALL subreddits...")
                     
-                    # Determine which subreddits to search based on country filter
+                    # Get all unique subreddits from Phase 1 results + do additional broad search
+                    found_subreddits = set()
+                    for discussion in all_discussions:
+                        if discussion.get('search_phase') == 'global':
+                            found_subreddits.add(discussion['subreddit'])
+                    
+                    # Add some major subreddits to ensure comprehensive coverage
+                    major_subs = ['personalfinance', 'investing', 'stocks', 'cryptocurrency', 'economy', 
+                                 'business', 'entrepreneur', 'financialindependence', 'Fire']
+                    
+                    # Only apply country filter if specified (don't limit by default)
                     if country_filter and country_filter in country_subreddits:
-                        target_subs = country_subreddits[country_filter]
-                        print(f"    Focusing on {country_filter} subreddits: {len(target_subs)} subreddits")
+                        additional_subs = country_subreddits[country_filter]
+                        print(f"    Adding {country_filter} focused subreddits: {additional_subs}")
+                        found_subreddits.update(additional_subs)
                     else:
-                        # Search all major subreddits for comprehensive results
-                        target_subs = []
-                        for country_subs in country_subreddits.values():
-                            target_subs.extend(country_subs)
-                        target_subs = list(set(target_subs))  # Remove duplicates
-                        print(f"    Searching ALL relevant subreddits: {len(target_subs)} subreddits")
+                        found_subreddits.update(major_subs)
+                    
+                    target_subs = list(found_subreddits)
+                    print(f"    Searching {len(target_subs)} subreddits total...")
                     
                     for sub_name in target_subs:
                         try:

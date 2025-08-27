@@ -552,10 +552,10 @@ class RedditDashboard:
     def _global_search_page(self):
         """Global keyword search across all of Reddit."""
         st.title("🌐 Global Search")
-        st.markdown("**SMART EXHAUSTIVE search** across **ALL of Reddit** - posts AND comments!")
+        st.markdown("**GLOBAL search** across **ALL of Reddit** - posts AND comments in ALL subreddits!")
         
         # Create info box
-        st.info("⚡ **FAST & EXHAUSTIVE:** Searches thoroughly but efficiently. Filter by **time range** and **country** for best results.")
+        st.info("🌍 **ALL SUBREDDITS:** Searches everywhere on Reddit. Country filter only adds focus, doesn't limit scope.")
         
         # Input form
         col1, col2 = st.columns([3, 1])
@@ -639,10 +639,8 @@ class RedditDashboard:
                             country_filter=country_for_search
                         )
                         
-                        # Apply country filter if selected
-                        if country_filter != "All" and country_filter in country_subreddits:
-                            country_subs = country_subreddits[country_filter]
-                            results = [r for r in results if any(cs in r['subreddit'].lower() for cs in country_subs)]
+                        # Country filter is now applied during search, not after
+                        # This ensures we don't lose results but add country-specific focus when requested
                             
                     finally:
                         # Restore original settings
