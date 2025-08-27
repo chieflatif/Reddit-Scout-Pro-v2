@@ -843,30 +843,22 @@ class RedditDashboard:
             )
         
         with col2:
-            limit = st.number_input("Posts to analyze:", min_value=50, max_value=300, value=100)
+            limit = st.number_input("Posts to analyze:", min_value=10, max_value=100, value=25, help="⚡ Lower values = faster processing")
         
         if st.button("☁️ Generate Word Cloud", type="primary") and subreddit:
             with st.spinner("Generating word cloud..."):
                 try:
                     wordcloud_data = self.scout.generate_wordcloud_data(subreddit, limit=limit)
                     
-                    # Debug information
-                    st.write(f"Debug: Result type: {type(wordcloud_data)}")
-                    st.write(f"Debug: Result keys: {list(wordcloud_data.keys()) if isinstance(wordcloud_data, dict) else 'Not a dict'}")
-                    
                     if 'error' in wordcloud_data:
                         st.error(f"Error: {wordcloud_data.get('error', 'Unknown error')}")
                         if 'error_type' in wordcloud_data:
                             st.error(f"Error type: {wordcloud_data['error_type']}")
-                        
-                    elif wordcloud_data.get('word_frequencies'):
-                        st.success("✅ Word Cloud data generated successfully!")
+                        return
                         
                 except Exception as e:
                     st.error(f"Exception in Word Cloud generation: {type(e).__name__}: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
-                    wordcloud_data = {'error': str(e)}
+                    return
                 
                 # Only proceed if we have valid data
                 if isinstance(wordcloud_data, dict) and 'word_frequencies' in wordcloud_data and wordcloud_data.get('word_frequencies'):

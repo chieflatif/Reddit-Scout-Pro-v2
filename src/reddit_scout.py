@@ -357,22 +357,15 @@ class RedditScout:
                 if submission.title:
                     all_text.append(submission.title)
                 
-                # Add selftext if it exists
-                if hasattr(submission, 'selftext') and submission.selftext and submission.selftext not in ['[removed]', '[deleted]', '']:
+                # Add selftext if it exists and is substantial
+                if (hasattr(submission, 'selftext') and 
+                    submission.selftext and 
+                    submission.selftext not in ['[removed]', '[deleted]', ''] and 
+                    len(submission.selftext) > 10):  # Only add substantial text
                     all_text.append(submission.selftext)
                 
-                # Add top comments (limit to avoid too much processing)
-                try:
-                    submission.comments.replace_more(limit=0)
-                    comment_count = 0
-                    for comment in submission.comments[:3]:  # Only top 3 comments per post
-                        if hasattr(comment, 'body') and comment.body not in ['[removed]', '[deleted]', '']:
-                            all_text.append(comment.body)
-                            comment_count += 1
-                        if comment_count >= 3:
-                            break
-                except Exception:
-                    pass  # Skip if comments can't be accessed
+                # SKIP COMMENTS FOR SPEED - they're too slow to load
+                # Comments can add 15+ seconds to processing time
                     
                 post_count += 1
                 if post_count >= limit:
