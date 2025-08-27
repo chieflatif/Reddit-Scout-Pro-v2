@@ -792,10 +792,9 @@ class RedditDashboard:
                                 fig = px.histogram(
                                     x=scores, 
                                     nbins=30,
-                                    title="Score Distribution"
+                                    title="Score Distribution",
+                                    labels={'x': 'Score', 'y': 'Number of Posts'}
                                 )
-                                fig.update_xaxis(title="Score")
-                                fig.update_yaxis(title="Number of Posts")
                                 st.plotly_chart(fig, use_container_width=True)
                             
                             with col2:
@@ -804,10 +803,9 @@ class RedditDashboard:
                                 fig = px.histogram(
                                     x=comments, 
                                     nbins=30,
-                                    title="Comments Distribution"
+                                    title="Comments Distribution",
+                                    labels={'x': 'Number of Comments', 'y': 'Number of Posts'}
                                 )
-                                fig.update_xaxis(title="Number of Comments")
-                                fig.update_yaxis(title="Number of Posts")
                                 st.plotly_chart(fig, use_container_width=True)
                             
                             # Summary stats
