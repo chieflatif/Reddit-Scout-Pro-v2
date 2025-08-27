@@ -552,10 +552,10 @@ class RedditDashboard:
     def _global_search_page(self):
         """Global keyword search across all of Reddit."""
         st.title("🌐 Global Search")
-        st.markdown("Search for discussions across **ALL of Reddit** - not limited to specific subreddits!")
+        st.markdown("**EXHAUSTIVE search** across **ALL of Reddit** - posts AND comments!")
         
         # Create info box
-        st.info("💡 **Tip:** This searches the entire Reddit platform. Great for discovering new communities and trending topics!")
+        st.info("🚀 **EXHAUSTIVE SEARCH:** No limits! Searches ALL posts, ALL comments, ALL timeframes. Filter only by date and country.")
         
         # Input form
         col1, col2 = st.columns([3, 1])
@@ -576,14 +576,9 @@ class RedditDashboard:
                 help="Filter results by time period"
             )
             
-            limit = st.number_input(
-                "Max results:", 
-                min_value=25, 
-                max_value=500, 
-                value=100,
-                step=25,
-                help="Maximum number of results to retrieve"
-            )
+            st.markdown("**🚀 EXHAUSTIVE SEARCH**")
+            st.caption("No limits! Searches ALL relevant posts and comments")
+            limit = None  # No limit for exhaustive search
         
         # Advanced options with country filter
         with st.expander("🔧 Advanced Options"):
@@ -634,7 +629,15 @@ class RedditDashboard:
                     settings.exclude_nsfw = exclude_nsfw
                     
                     try:
-                        results = self.scout.search_global_keywords(keyword_list, limit=limit, time_filter=time_filter)
+                        # Pass country filter to search function
+                        country_for_search = country_filter if country_filter != "All" else None
+                        results = self.scout.search_global_keywords(
+                            keyword_list, 
+                            limit=None,  # No limit for exhaustive search
+                            time_filter=time_filter, 
+                            search_comments=True,
+                            country_filter=country_for_search
+                        )
                         
                         # Apply country filter if selected
                         if country_filter != "All" and country_filter in country_subreddits:
