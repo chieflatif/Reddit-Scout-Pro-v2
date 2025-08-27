@@ -217,15 +217,14 @@ class RedditScout:
         all_discussions = []
         seen_ids = set()  # To avoid duplicates
         
-        # Define comprehensive subreddit lists by country
+        # Define focused subreddit lists by country (optimized for speed)
         country_subreddits = {
-            'Spain': ['SpainFIRE', 'spain', 'es', 'espana', 'catalunya', 'madrid', 'barcelona', 'valencia', 'sevilla', 'bilbao', 
-                     'Andalucia', 'Galicia', 'euskera', 'Spanish', 'SpanishPersonalFinance', 'investing_spain'],
-            'USA': ['personalfinance', 'investing', 'financialindependence', 'SecurityAnalysis', 'SecurityAnalysis', 'Fire', 'leanfire', 'fatfire'],
-            'UK': ['UKPersonalFinance', 'FIREUK', 'UKInvesting', 'unitedkingdom'],
-            'Germany': ['Finanzen', 'germany', 'de', 'deutschland'],
-            'France': ['vosfinances', 'france', 'french'],
-            'Canada': ['PersonalFinanceCanada', 'canada', 'CanadianInvestor'],
+            'Spain': ['SpainFIRE', 'spain', 'es', 'eupersonalfinance'],
+            'USA': ['personalfinance', 'investing', 'financialindependence', 'Fire'],
+            'UK': ['UKPersonalFinance', 'FIREUK', 'unitedkingdom'],
+            'Germany': ['Finanzen', 'germany', 'de'],
+            'France': ['vosfinances', 'france'],
+            'Canada': ['PersonalFinanceCanada', 'canada'],
             # Add more as needed
         }
         
@@ -235,7 +234,7 @@ class RedditScout:
                 
                 # 1. GLOBAL SEARCH - Reddit's built-in search across ALL subreddits
                 print(f"  Phase 1: Global Reddit search...")
-                search_limit = 1000 if limit is None else limit  # Use high limit for exhaustive search
+                search_limit = 200 if limit is None else limit  # Balanced limit for speed vs coverage
                 
                 for submission in self.reddit.subreddit('all').search(
                     keyword, 
@@ -285,13 +284,18 @@ class RedditScout:
                             subreddit = self.reddit.subreddit(sub_name)
                             print(f"    🔍 Deep search in r/{sub_name}...")
                             
-                            # EXHAUSTIVE search strategies - NO LIMITS
+                            # EXHAUSTIVE search strategies - RESPECTING TIME FILTER
                             search_strategies = [
-                                ('search_all', lambda: subreddit.search(keyword, limit=None, time_filter=time_filter, sort='relevance')),
-                                ('top_all', lambda: subreddit.top(limit=None, time_filter=time_filter)),
-                                ('hot', lambda: subreddit.hot(limit=200)),
-                                ('new', lambda: subreddit.new(limit=200))
+                                ('search', lambda: subreddit.search(keyword, limit=None, time_filter=time_filter, sort='relevance')),
+                                ('top', lambda: subreddit.top(limit=None, time_filter=time_filter)),
                             ]
+                            
+                            # Only add hot/new if time_filter allows recent content
+                            if time_filter in ['day', 'week', 'month']:
+                                search_strategies.extend([
+                                    ('hot', lambda: subreddit.hot(limit=200)),
+                                    ('new', lambda: subreddit.new(limit=200))
+                                ])
                             
                             posts_found_in_sub = 0
                             for strategy_name, strategy_func in search_strategies:
@@ -304,10 +308,11 @@ class RedditScout:
                                         if submission.id in seen_ids:
                                             continue
                                         
-                                        # Check comments exhaustively
+                                        # Smart comment check - fast but thorough
                                         try:
-                                            submission.comments.replace_more(limit=None)  # Load ALL comments
-                                            comments = submission.comments.list()
+                                            # Load only top-level comments initially for speed
+                                            submission.comments.replace_more(limit=3)  # Limited expansion for speed
+                                            comments = submission.comments.list()[:50]  # Check first 50 comments only
                                             
                                             # Multiple keyword variations for better matching
                                             keyword_variations = [

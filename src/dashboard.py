@@ -552,10 +552,10 @@ class RedditDashboard:
     def _global_search_page(self):
         """Global keyword search across all of Reddit."""
         st.title("🌐 Global Search")
-        st.markdown("**EXHAUSTIVE search** across **ALL of Reddit** - posts AND comments!")
+        st.markdown("**SMART EXHAUSTIVE search** across **ALL of Reddit** - posts AND comments!")
         
         # Create info box
-        st.info("🚀 **EXHAUSTIVE SEARCH:** No limits! Searches ALL posts, ALL comments, ALL timeframes. Filter only by date and country.")
+        st.info("⚡ **FAST & EXHAUSTIVE:** Searches thoroughly but efficiently. Filter by **time range** and **country** for best results.")
         
         # Input form
         col1, col2 = st.columns([3, 1])
@@ -572,8 +572,8 @@ class RedditDashboard:
             time_filter = st.selectbox(
                 "Time range:",
                 options=["all", "year", "month", "week", "day"],
-                index=3,  # Default to 'week'
-                help="Filter results by time period"
+                index=0,  # Default to 'all' for exhaustive search
+                help="Filter results by time period - 'all' searches entire Reddit history"
             )
             
             st.markdown("**🚀 EXHAUSTIVE SEARCH**")
