@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv/
+
+# Poetry
+poetry.lock
+dist/
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Streamlit
+.streamlit/secrets.toml
+.streamlit/credentials.toml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+*.csv
+*.xlsx
+*.json
+data/
+exports/
+downloads/
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Documentation
+docs/_build/
+site/
