@@ -1,4 +1,4 @@
-# 🔍 Reddit Explorer
+# 🔍 Reddit Scout Pro
 
 A comprehensive Reddit analysis and discovery tool with an intuitive Streamlit dashboard.
 
@@ -56,7 +56,7 @@ A comprehensive Reddit analysis and discovery tool with an intuitive Streamlit d
 1. **Clone the repository:**
 ```bash
 git clone <repository-url>
-cd reddit-explorer
+cd Scrapers
 ```
 
 2. **Install dependencies with Poetry:**
@@ -79,29 +79,38 @@ pip install -r requirements.txt
 ```bash
 REDDIT_CLIENT_ID=your_client_id_here
 REDDIT_CLIENT_SECRET=your_client_secret_here
-REDDIT_USER_AGENT=RedditExplorer/1.0
+REDDIT_USER_AGENT=RedditScoutPro/1.0
 ```
 
 ## Usage
 
 ### Running the Dashboard
 
-**With Poetry:**
+**🎯 EASIEST WAY (Recommended):**
+```bash
+reddit-scout
+```
+*Note: Run `./setup_alias.sh` first, then restart terminal or run `source ~/.zshrc`*
+
+**🚀 ALTERNATIVE (Direct script):**
+```bash
+./start.sh
+```
+
+**📘 MANUAL (Poetry):**
 ```bash
 poetry run streamlit run app.py
 ```
 
-**With Python directly:**
-```bash
-python app.py
-```
-
-**With Streamlit:**
-```bash
-streamlit run app.py
-```
-
 The dashboard will open in your browser at `http://localhost:8501`
+
+### ⚡ Quick Setup (One-time)
+```bash
+cd "/Users/martin/Reddit Scout Pro"
+./setup_alias.sh
+# Restart terminal or: source ~/.zshrc
+reddit-scout
+```
 
 ### Navigation
 
@@ -154,7 +163,7 @@ The application supports the following environment variables:
 # Reddit API
 REDDIT_CLIENT_ID=your_client_id
 REDDIT_CLIENT_SECRET=your_client_secret
-REDDIT_USER_AGENT=RedditExplorer/1.0
+REDDIT_USER_AGENT=RedditScoutPro/1.0
 
 # Content Filtering
 MIN_SCORE_THRESHOLD=5
@@ -213,7 +222,7 @@ The application respects Reddit's API rate limits:
 
 ### Project Structure
 ```
-reddit-explorer/
+Reddit Scout Pro/
 ├── src/
 │   ├── __init__.py
 │   ├── config.py          # Configuration management
@@ -273,6 +282,44 @@ reddit-explorer/
 4. Add tests if applicable
 5. Submit a pull request
 
+## 🚀 Deployment
+
+### **Quick Deploy to Streamlit Cloud (FREE):**
+1. Push this repository to GitHub
+2. Visit [share.streamlit.io](https://share.streamlit.io)
+3. Connect your GitHub repository
+4. Set main file: `app.py`
+5. Add Reddit API credentials to Streamlit secrets
+6. Deploy!
+
+**📖 Detailed deployment guide:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+### **Files for Deployment:**
+- `requirements_deployment.txt` - Production dependencies
+- `.streamlit/config.toml` - Streamlit configuration  
+- `env.example` - Environment variables template
+- `DEPLOYMENT.md` - Complete deployment guide
+
+## Project Structure
+
+```
+Reddit Scout Pro/
+├── src/
+│   ├── __init__.py
+│   ├── config.py              # Configuration management
+│   ├── reddit_scout.py        # Reddit API client and data processing
+│   └── dashboard.py           # Streamlit interface
+├── .streamlit/
+│   └── config.toml           # Streamlit configuration
+├── app.py                    # Main entry point
+├── start.sh                  # Easy startup script
+├── setup_alias.sh           # Setup 'reddit-scout' command
+├── requirements_deployment.txt # Production dependencies
+├── pyproject.toml           # Poetry dependencies
+├── DEPLOYMENT.md            # Deployment guide
+└── README.md               # This file
+```
+
 ## License
 
 This project is open source and available under the MIT License.
@@ -283,7 +330,9 @@ For questions, issues, or feature requests:
 - Open an issue on GitHub
 - Check the troubleshooting section above
 - Review Reddit API documentation
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for deployment help
 
 ---
 
-**Happy Reddit Exploring! 🔍📊💭** 
+**Happy Reddit Exploring! 🔍📊💭**
+**Ready to deploy? Check [DEPLOYMENT.md](DEPLOYMENT.md)! 🚀** 

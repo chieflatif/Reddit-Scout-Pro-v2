@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "reddit-explorer"
+name = "reddit-scout-pro"
 version = "1.0.0"
-description = "Reddit Explorer - Comprehensive Reddit analysis and discovery tool"
+description = "Reddit Scout Pro - Comprehensive Reddit analysis and discovery tool"
 authors = ["Martin <martin@example.com>"]
 readme = "README.md"
 package-mode = false

@@ -212,33 +212,24 @@ class RedditScout:
                     
         return sorted(all_discussions, key=lambda x: x['score'], reverse=True)
     
-    def search_global_keywords(self, keywords: List[str], limit: int = None, time_filter: str = 'all', search_comments: bool = True, country_filter: str = None) -> List[Dict]:
-        """EXHAUSTIVE search for discussions containing keywords across ALL of Reddit."""
+    def search_global_keywords(self, keywords: List[str], limit: int = None, time_filter: str = 'all', search_comments: bool = False, country_filter: str = None) -> List[Dict]:
+        """FAST search for discussions containing keywords across Reddit."""
         all_discussions = []
         seen_ids = set()  # To avoid duplicates
         
-        # Define focused subreddit lists by country (optimized for speed)
-        country_subreddits = {
-            'Spain': ['SpainFIRE', 'spain', 'es', 'eupersonalfinance'],
-            'USA': ['personalfinance', 'investing', 'financialindependence', 'Fire'],
-            'UK': ['UKPersonalFinance', 'FIREUK', 'unitedkingdom'],
-            'Germany': ['Finanzen', 'germany', 'de'],
-            'France': ['vosfinances', 'france'],
-            'Canada': ['PersonalFinanceCanada', 'canada'],
-            # Add more as needed
-        }
+        # Set reasonable limits for speed
+        max_results_per_keyword = min(limit or 50, 50)  # Cap at 50 results per keyword
         
         for keyword in keywords:
             try:
-                print(f"🔍 EXHAUSTIVE SEARCH for '{keyword}' across Reddit...")
+                print(f"🔍 FAST SEARCH for '{keyword}' across Reddit...")
                 
-                # 1. GLOBAL SEARCH - Reddit's built-in search across ALL subreddits
-                print(f"  Phase 1: Global Reddit search...")
-                search_limit = 200 if limit is None else limit  # Balanced limit for speed vs coverage
+                # FAST GLOBAL SEARCH - Limited but quick
+                print(f"  Searching Reddit with limit: {max_results_per_keyword}")
                 
                 for submission in self.reddit.subreddit('all').search(
                     keyword, 
-                    limit=search_limit, 
+                    limit=max_results_per_keyword, 
                     time_filter=time_filter,
                     sort='relevance'
                 ):
@@ -261,122 +252,50 @@ class RedditScout:
                         
                         all_discussions.append(discussion_data)
                 
-                print(f"  Phase 1 complete: Found {len([d for d in all_discussions if d.get('search_phase') == 'global'])} posts in global search")
+                print(f"  Found {len([d for d in all_discussions if d.get('search_phase') == 'global' and d.get('matched_keyword') == keyword])} posts for '{keyword}'")
                 
-                # 2. ENHANCED GLOBAL SEARCH - Search ALL subreddits with comments
-                if search_comments:
-                    print(f"  Phase 2: Enhanced search with comments across ALL subreddits...")
+                # Optional: Quick search in a few popular subreddits (if enabled)
+                if search_comments and country_filter:
+                    print(f"  Optional: Quick search in {country_filter} subreddits...")
                     
-                    # Get all unique subreddits from Phase 1 results + do additional broad search
-                    found_subreddits = set()
-                    for discussion in all_discussions:
-                        if discussion.get('search_phase') == 'global':
-                            found_subreddits.add(discussion['subreddit'])
+                    # Define focused subreddit lists by country
+                    country_subreddits = {
+                        'Spain': ['SpainFIRE', 'spain', 'es', 'eupersonalfinance'],
+                        'USA': ['personalfinance', 'investing', 'financialindependence', 'Fire'],
+                        'UK': ['UKPersonalFinance', 'FIREUK', 'unitedkingdom'],
+                        'Germany': ['Finanzen', 'germany', 'de'],
+                        'France': ['vosfinances', 'france'],
+                        'Canada': ['PersonalFinanceCanada', 'canada'],
+                    }
                     
-                    # Add some major subreddits to ensure comprehensive coverage
-                    major_subs = ['personalfinance', 'investing', 'stocks', 'cryptocurrency', 'economy', 
-                                 'business', 'entrepreneur', 'financialindependence', 'Fire']
-                    
-                    # Only apply country filter if specified (don't limit by default)
-                    if country_filter and country_filter in country_subreddits:
-                        additional_subs = country_subreddits[country_filter]
-                        print(f"    Adding {country_filter} focused subreddits: {additional_subs}")
-                        found_subreddits.update(additional_subs)
-                    else:
-                        found_subreddits.update(major_subs)
-                    
-                    target_subs = list(found_subreddits)
-                    print(f"    Searching {len(target_subs)} subreddits total...")
+                    target_subs = country_subreddits.get(country_filter, [])[:3]  # Limit to 3 subreddits max
                     
                     for sub_name in target_subs:
                         try:
                             subreddit = self.reddit.subreddit(sub_name)
-                            print(f"    🔍 Deep search in r/{sub_name}...")
+                            print(f"    🔍 Quick search in r/{sub_name}...")
                             
-                            # EXHAUSTIVE search strategies - RESPECTING TIME FILTER
-                            search_strategies = [
-                                ('search', lambda: subreddit.search(keyword, limit=None, time_filter=time_filter, sort='relevance')),
-                                ('top', lambda: subreddit.top(limit=None, time_filter=time_filter)),
-                            ]
-                            
-                            # Only add hot/new if time_filter allows recent content
-                            if time_filter in ['day', 'week', 'month']:
-                                search_strategies.extend([
-                                    ('hot', lambda: subreddit.hot(limit=200)),
-                                    ('new', lambda: subreddit.new(limit=200))
-                                ])
-                            
-                            posts_found_in_sub = 0
-                            for strategy_name, strategy_func in search_strategies:
-                                try:
-                                    print(f"      {strategy_name}...", end=" ")
-                                    submissions = list(strategy_func())
-                                    strategy_found = 0
-                                    
-                                    for submission in submissions:
-                                        if submission.id in seen_ids:
-                                            continue
-                                        
-                                        # Smart comment check - fast but thorough
-                                        try:
-                                            # Load only top-level comments initially for speed
-                                            submission.comments.replace_more(limit=3)  # Limited expansion for speed
-                                            comments = submission.comments.list()[:50]  # Check first 50 comments only
-                                            
-                                            # Multiple keyword variations for better matching
-                                            keyword_variations = [
-                                                keyword.lower(), 
-                                                keyword.lower().replace('i', ''), 
-                                                keyword.replace('capital', 'Capital'),
-                                                f"mi {keyword.lower()}",
-                                                keyword.lower().replace('micappital', 'mi capital')
-                                            ]
-                                            
-                                            found_match = False
-                                            matching_comment = None
-                                            
-                                            for comment in comments:
-                                                if hasattr(comment, 'body'):
-                                                    comment_text = comment.body.lower()
-                                                    for variation in keyword_variations:
-                                                        if variation.lower() in comment_text:
-                                                            found_match = True
-                                                            matching_comment = comment
-                                                            break
-                                                if found_match:
-                                                    break
-                                            
-                                            if found_match:
-                                                seen_ids.add(submission.id)
-                                                strategy_found += 1
-                                                posts_found_in_sub += 1
-                                                
-                                                discussion_data = self._extract_submission_data(submission)
-                                                discussion_data['matched_keyword'] = keyword
-                                                discussion_data['subreddit'] = submission.subreddit.display_name
-                                                discussion_data['match_location'] = 'comment'
-                                                discussion_data['matched_comment'] = matching_comment.body[:300] + '...' if len(matching_comment.body) > 300 else matching_comment.body
-                                                discussion_data['search_phase'] = 'deep_subreddit'
-                                                discussion_data['search_strategy'] = strategy_name
-                                                
-                                                # Add additional metadata
-                                                discussion_data['subreddit_subscribers'] = getattr(submission.subreddit, 'subscribers', 0) or 0
-                                                discussion_data['is_video'] = submission.is_video
-                                                discussion_data['preview_text'] = submission.selftext[:200] + '...' if submission.selftext and len(submission.selftext) > 200 else submission.selftext
-                                                
-                                                all_discussions.append(discussion_data)
-                                                
-                                        except Exception as comment_error:
-                                            continue
-                                    
-                                    print(f"found {strategy_found}")
-                                    
-                                except Exception as strategy_error:
-                                    print(f"error: {strategy_error}")
+                            # Simple search - much faster
+                            for submission in subreddit.search(keyword, limit=10, time_filter=time_filter):
+                                if submission.id in seen_ids:
                                     continue
-                            
-                            print(f"      ✅ r/{sub_name}: {posts_found_in_sub} total matches")
-                                        
+                                    
+                                seen_ids.add(submission.id)
+                                
+                                if self._should_include_post(submission):
+                                    discussion_data = self._extract_submission_data(submission)
+                                    discussion_data['matched_keyword'] = keyword
+                                    discussion_data['subreddit'] = submission.subreddit.display_name
+                                    discussion_data['match_location'] = 'post'
+                                    discussion_data['search_phase'] = 'country_focused'
+                                    
+                                    # Add additional metadata
+                                    discussion_data['subreddit_subscribers'] = getattr(submission.subreddit, 'subscribers', 0) or 0
+                                    discussion_data['is_video'] = submission.is_video
+                                    discussion_data['preview_text'] = submission.selftext[:200] + '...' if submission.selftext and len(submission.selftext) > 200 else submission.selftext
+                                    
+                                    all_discussions.append(discussion_data)
+                                    
                         except Exception as sub_error:
                             print(f"      ❌ r/{sub_name}: {sub_error}")
                             continue
@@ -385,7 +304,7 @@ class RedditScout:
                 print(f"Error searching keyword '{keyword}': {e}")
                 continue
                 
-        print(f"\n🎯 EXHAUSTIVE SEARCH COMPLETE: {len(all_discussions)} total results found")
+        print(f"\n🎯 FAST SEARCH COMPLETE: {len(all_discussions)} total results found")
         
         # Sort by relevance: score and recency
         return sorted(all_discussions, key=lambda x: (x['score'], x['created_utc']), reverse=True)

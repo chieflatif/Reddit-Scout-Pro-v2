@@ -523,9 +523,23 @@ class RedditDashboard:
                 height=100
             )
         
-        limit = st.number_input("Results per keyword:", min_value=10, max_value=100, value=20)
+        col1, col2, col3 = st.columns([2, 1, 1])
         
-        if st.button("🔎 Search Keywords", type="primary"):
+        with col1:
+            limit = st.number_input("Results per keyword:", min_value=10, max_value=100, value=20)
+        
+        with col2:
+            search_button = st.button("🔎 Search Keywords", type="primary")
+            
+        with col3:
+            if st.button("🗑️ Clear Results"):
+                if 'keyword_search_results' in st.session_state:
+                    del st.session_state['keyword_search_results']
+                if 'keyword_search_keywords' in st.session_state:
+                    del st.session_state['keyword_search_keywords']
+                st.rerun()
+        
+        if search_button:
             keyword_list = [k.strip() for k in keywords.split('\n') if k.strip()]
             subreddit_list = [s.strip() for s in subreddits.split('\n') if s.strip()]
             
@@ -533,29 +547,75 @@ class RedditDashboard:
                 with st.spinner("Searching across subreddits..."):
                     results = self.scout.get_keyword_discussions(keyword_list, subreddit_list, limit=limit)
                     
-                    if results:
-                        st.success(f"Found {len(results)} discussions")
-                        
-                        # Group by keyword
-                        for keyword in keyword_list:
-                            keyword_results = [r for r in results if r['matched_keyword'] == keyword]
-                            if keyword_results:
-                                st.subheader(f"🔍 Results for '{keyword}' ({len(keyword_results)} found)")
-                                
-                                for result in keyword_results[:10]:  # Show top 10 per keyword
-                                    self._display_discussion(result, show_subreddit=True, show_keyword=True)
+                    # Store results in session state
+                    st.session_state['keyword_search_results'] = results
+                    st.session_state['keyword_search_keywords'] = keyword_list
+        
+        # Display results if they exist in session state
+        if 'keyword_search_results' in st.session_state and st.session_state['keyword_search_results']:
+            results = st.session_state['keyword_search_results']
+            keyword_list = st.session_state['keyword_search_keywords']
+            
+            # Summary statistics
+            st.success(f"Found {len(results)} discussions")
+            unique_subreddits = set(r['subreddit'] for r in results)
+            st.info(f"📊 Results from {len(unique_subreddits)} subreddits: {', '.join(sorted(unique_subreddits))}")
+            
+            # Add global display controls
+            st.markdown("---")
+            col1, col2 = st.columns([2, 1])
+            with col1:
+                st.markdown("### 📋 Search Results")
+            with col2:
+                sort_option = st.selectbox("Sort all results by:", 
+                                         ["Score (High to Low)", "Comments (High to Low)", "Date (Newest First)"],
+                                         key="global_sort")
+            
+            # Sort all results based on selection
+            if sort_option == "Score (High to Low)":
+                results = sorted(results, key=lambda x: x['score'], reverse=True)
+            elif sort_option == "Comments (High to Low)":
+                results = sorted(results, key=lambda x: x['num_comments'], reverse=True)
+            else:  # Date (Newest First)
+                results = sorted(results, key=lambda x: x['created_utc'], reverse=True)
+            
+            # Group by keyword
+            for keyword in keyword_list:
+                keyword_results = [r for r in results if r['matched_keyword'] == keyword]
+                if keyword_results:
+                    st.subheader(f"🔍 Results for '{keyword}' ({len(keyword_results)} found)")
+                    
+                    # Show all results, but with pagination for large result sets
+                    max_display = st.selectbox(f"Show results for '{keyword}':", 
+                                             [10, 25, 50, "All"], 
+                                             index=0, 
+                                             key=f"display_{keyword}")
+                    
+                    if max_display == "All":
+                        display_results = keyword_results
                     else:
-                        st.warning("No discussions found for the specified keywords.")
-            else:
-                st.error("Please provide at least one keyword and one subreddit.")
+                        display_results = keyword_results[:max_display]
+                    
+                    for result in display_results:
+                        self._display_discussion(result, show_subreddit=True, show_keyword=True)
+                        
+                    # Show summary if there are more results
+                    if len(keyword_results) > len(display_results):
+                        st.info(f"Showing {len(display_results)} of {len(keyword_results)} results. Select 'All' above to see everything.")
+                        
+        # Show message for first time or no results
+        elif 'keyword_search_results' in st.session_state and not st.session_state['keyword_search_results']:
+            st.warning("No discussions found for the specified keywords.")
+        elif 'keyword_search_results' not in st.session_state:
+            st.info("👆 Enter keywords and subreddits above, then click 'Search Keywords' to find discussions.")
     
     def _global_search_page(self):
         """Global keyword search across all of Reddit."""
         st.title("🌐 Global Search")
-        st.markdown("**GLOBAL search** across **ALL of Reddit** - posts AND comments in ALL subreddits!")
+        st.markdown("**FAST global search** across **ALL of Reddit** - optimized for speed!")
         
         # Create info box
-        st.info("🌍 **ALL SUBREDDITS:** Searches everywhere on Reddit. Country filter only adds focus, doesn't limit scope.")
+        st.info("⚡ **FAST SEARCH:** Optimized to find the most relevant results quickly across all of Reddit. Country filter adds focused subreddit search.")
         
         # Input form
         col1, col2 = st.columns([3, 1])
@@ -563,22 +623,30 @@ class RedditDashboard:
         with col1:
             keywords = st.text_area(
                 "Keywords to search:",
-                value="Micappital\nMiCappital\nMi Capital",
+                value="Indexa Capital",
                 height=100,
-                help="Enter keywords to search across all of Reddit. Use one keyword per line for multiple searches. Add variations like 'Micappital', 'MiCappital', 'Mi Capital' to find more results."
+                help="Enter keywords to search across all of Reddit. Use one keyword per line for multiple searches."
             )
         
         with col2:
             time_filter = st.selectbox(
                 "Time range:",
-                options=["all", "year", "month", "week", "day"],
-                index=0,  # Default to 'all' for exhaustive search
-                help="Filter results by time period - 'all' searches entire Reddit history"
+                options=["week", "month", "year", "all", "day"],
+                index=0,  # Default to 'week' for faster search
+                help="Filter results by time period - shorter periods are faster"
             )
             
-            st.markdown("**🚀 EXHAUSTIVE SEARCH**")
-            st.caption("No limits! Searches ALL relevant posts and comments")
-            limit = None  # No limit for exhaustive search
+            limit = st.number_input(
+                "Max results per keyword:",
+                min_value=10,
+                max_value=100,
+                value=50,
+                step=10,
+                help="Limit results for faster search"
+            )
+            
+            st.markdown("**⚡ FAST SEARCH**")
+            st.caption("Optimized for speed and relevance")
         
         # Advanced options with country filter
         with st.expander("🔧 Advanced Options"):
@@ -613,12 +681,20 @@ class RedditDashboard:
                     "Korea": ["korea", "hanguk"]
                 }
         
-        if st.button("🌐 Search Globally", type="primary"):
+        # Search controls
+        col1, col2 = st.columns([1, 1])
+        with col1:
+            search_comments = st.checkbox("Include country-focused search", value=False, help="Enables additional search in country-specific subreddits")
+        with col2:
+            if country_filter != "All":
+                st.info(f"Will search {country_filter} subreddits if enabled above")
+
+        if st.button("⚡ Search Globally (Fast)", type="primary"):
             # Handle both single keywords and multiple keywords (one per line)
             keyword_list = [k.strip() for k in keywords.replace(',', '\n').split('\n') if k.strip()]
             
             if keyword_list:
-                with st.spinner(f"Searching across all of Reddit for {len(keyword_list)} keywords..."):
+                with st.spinner(f"Fast search across Reddit for {len(keyword_list)} keywords..."):
                     # Update filters temporarily
                     old_min_score = settings.min_score_threshold
                     old_min_comments = settings.min_comments_threshold
@@ -633,9 +709,9 @@ class RedditDashboard:
                         country_for_search = country_filter if country_filter != "All" else None
                         results = self.scout.search_global_keywords(
                             keyword_list, 
-                            limit=None,  # No limit for exhaustive search
+                            limit=limit,  # Use user-defined limit for speed
                             time_filter=time_filter, 
-                            search_comments=True,
+                            search_comments=search_comments,
                             country_filter=country_for_search
                         )
                         
@@ -675,8 +751,31 @@ class RedditDashboard:
                         tab1, tab2, tab3 = st.tabs(["📑 All Results", "🏆 Top Subreddits", "📊 Analytics"])
                         
                         with tab1:
+                            # Display controls
+                            col1, col2 = st.columns([2, 1])
+                            with col1:
+                                display_count = st.selectbox("Results to display:", [25, 50, 100, "All"], index=1)
+                            with col2:
+                                sort_by = st.selectbox("Sort by:", ["Score", "Comments", "Date"], index=0)
+                            
+                            # Sort results
+                            if sort_by == "Score":
+                                sorted_results = sorted(results, key=lambda x: x['score'], reverse=True)
+                            elif sort_by == "Comments":
+                                sorted_results = sorted(results, key=lambda x: x['num_comments'], reverse=True)
+                            else:  # Date
+                                sorted_results = sorted(results, key=lambda x: x['created_utc'], reverse=True)
+                            
+                            # Determine how many to show
+                            if display_count == "All":
+                                display_results = sorted_results
+                            else:
+                                display_results = sorted_results[:display_count]
+                            
+                            st.write(f"Showing {len(display_results)} of {len(results)} total results")
+                            
                             # Display results
-                            for idx, post in enumerate(results[:50]):  # Limit display to 50
+                            for idx, post in enumerate(display_results):
                                 with st.container():
                                     col1, col2 = st.columns([5, 1])
                                     
