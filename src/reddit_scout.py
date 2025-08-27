@@ -212,14 +212,16 @@ class RedditScout:
                     
         return sorted(all_discussions, key=lambda x: x['score'], reverse=True)
     
-    def search_global_keywords(self, keywords: List[str], limit: int = 100, time_filter: str = 'week') -> List[Dict]:
-        """Search for discussions containing keywords across ALL of Reddit."""
+    def search_global_keywords(self, keywords: List[str], limit: int = 100, time_filter: str = 'week', search_comments: bool = True) -> List[Dict]:
+        """Search for discussions containing keywords across ALL of Reddit, including comments."""
         all_discussions = []
         seen_ids = set()  # To avoid duplicates
         
         for keyword in keywords:
             try:
-                # Search across all of Reddit using the search function
+                print(f"🔍 Searching for '{keyword}' across all Reddit...")
+                
+                # First, search in post titles and content
                 for submission in self.reddit.subreddit('all').search(
                     keyword, 
                     limit=limit//len(keywords), 
@@ -236,6 +238,7 @@ class RedditScout:
                         discussion_data = self._extract_submission_data(submission)
                         discussion_data['matched_keyword'] = keyword
                         discussion_data['subreddit'] = submission.subreddit.display_name
+                        discussion_data['match_location'] = 'post'
                         
                         # Add additional metadata
                         discussion_data['subreddit_subscribers'] = getattr(submission.subreddit, 'subscribers', 0) or 0
@@ -243,11 +246,58 @@ class RedditScout:
                         discussion_data['preview_text'] = submission.selftext[:200] + '...' if submission.selftext and len(submission.selftext) > 200 else submission.selftext
                         
                         all_discussions.append(discussion_data)
+                
+                # If search_comments is enabled, also search in comments
+                if search_comments:
+                    print(f"🔍 Searching comments for '{keyword}'...")
+                    try:
+                        # Search comments across all Reddit
+                        for comment in self.reddit.subreddit('all').search(
+                            f'"{keyword}"',  # Use quotes for exact phrase matching
+                            limit=limit//len(keywords)//2,  # Fewer comments to avoid overload
+                            time_filter=time_filter,
+                            sort='relevance'
+                        ):
+                            # Get the parent submission
+                            try:
+                                submission = comment.submission
+                                
+                                # Skip if we've already seen this post
+                                if submission.id in seen_ids:
+                                    continue
+                                    
+                                seen_ids.add(submission.id)
+                                
+                                # Check if the actual comment text contains our keyword
+                                comment_text = getattr(comment, 'body', '')
+                                if keyword.lower() in comment_text.lower():
+                                    discussion_data = self._extract_submission_data(submission)
+                                    discussion_data['matched_keyword'] = keyword
+                                    discussion_data['subreddit'] = submission.subreddit.display_name
+                                    discussion_data['match_location'] = 'comment'
+                                    discussion_data['matched_comment'] = comment_text[:200] + '...' if len(comment_text) > 200 else comment_text
+                                    
+                                    # Add additional metadata
+                                    discussion_data['subreddit_subscribers'] = getattr(submission.subreddit, 'subscribers', 0) or 0
+                                    discussion_data['is_video'] = submission.is_video
+                                    discussion_data['preview_text'] = submission.selftext[:200] + '...' if submission.selftext and len(submission.selftext) > 200 else submission.selftext
+                                    
+                                    all_discussions.append(discussion_data)
+                                    
+                            except Exception as comment_error:
+                                print(f"Error processing comment: {comment_error}")
+                                continue
+                                
+                    except Exception as comment_search_error:
+                        print(f"Error searching comments for '{keyword}': {comment_search_error}")
+                        continue
                         
             except Exception as e:
                 print(f"Error searching keyword '{keyword}' globally: {e}")
                 continue
                 
+        print(f"🎯 Total results found: {len(all_discussions)}")
+        
         # Sort by a combination of score and recency
         return sorted(all_discussions, key=lambda x: (x['score'], x['created_utc']), reverse=True)
     

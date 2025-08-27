@@ -563,9 +563,9 @@ class RedditDashboard:
         with col1:
             keywords = st.text_area(
                 "Keywords to search:",
-                value="Micappital",
+                value="Micappital\nMiCappital\nMi Capital",
                 height=100,
-                help="Enter keywords to search across all of Reddit. Use one keyword per line for multiple searches, or just one keyword for single search. Examples: 'Micappital', 'fintech', 'investing'"
+                help="Enter keywords to search across all of Reddit. Use one keyword per line for multiple searches. Add variations like 'Micappital', 'MiCappital', 'Mi Capital' to find more results."
             )
         
         with col2:
@@ -610,7 +610,7 @@ class RedditDashboard:
                     "Australia": ["australia", "straya", "aussie"],
                     "Germany": ["germany", "de", "deutschland"],
                     "France": ["france", "french"],
-                    "Spain": ["spain", "es", "espana"],
+                    "Spain": ["spain", "es", "espana", "spainfire", "catalunya", "madrid", "barcelona"],
                     "Mexico": ["mexico", "mujico"],
                     "Brazil": ["brasil", "brazil"],
                     "India": ["india", "indiaspeaks", "indianews"],
@@ -685,18 +685,25 @@ class RedditDashboard:
                                         st.markdown(f"### [{post['title']}]({post_url})")
                                         
                                         # Metadata
+                                        match_location = post.get('match_location', 'post')
+                                        match_icon = "💬" if match_location == 'comment' else "📝"
+                                        
                                         meta_parts = [
                                             f"r/{post['subreddit']}",
                                             f"👤 u/{post['author']}",
                                             f"⬆️ {post['score']:,}",
                                             f"💬 {post['num_comments']:,}",
-                                            f"🔍 {post['matched_keyword']}"
+                                            f"{match_icon} {post['matched_keyword']} ({'in comment' if match_location == 'comment' else 'in post'})"
                                         ]
                                         
                                         if post.get('subreddit_subscribers', 0) > 0:
                                             meta_parts.append(f"👥 {post['subreddit_subscribers']:,} subscribers")
                                         
                                         st.markdown(" • ".join(meta_parts))
+                                        
+                                        # Show matched comment if available
+                                        if match_location == 'comment' and post.get('matched_comment'):
+                                            st.markdown(f"**💬 Matched comment:** _{post['matched_comment']}_")
                                         
                                         # Preview text if available and enabled
                                         if show_preview and post.get('preview_text'):
