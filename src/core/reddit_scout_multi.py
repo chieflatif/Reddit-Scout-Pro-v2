@@ -2,9 +2,15 @@
 
 import praw
 from typing import Optional, Dict, List, Any
-from ..database.models import APIKey, UserPreferences
-from ..database.database import get_db_session
-from .encryption import decrypt_api_key
+try:
+    from ..database.models import APIKey, UserPreferences
+    from ..database.database import get_db_session
+    from .encryption import decrypt_api_key
+except ImportError:
+    # Fallback for direct imports
+    from database.models import APIKey, UserPreferences
+    from database.database import get_db_session
+    from core.encryption import decrypt_api_key
 from datetime import datetime
 import logging
 import json
@@ -91,7 +97,10 @@ class UserRedditScout:
     
     def update_api_keys(self, client_id: str, client_secret: str, user_agent: str = None) -> Dict[str, any]:
         """Update user's API keys."""
-        from .encryption import encrypt_api_key
+        try:
+            from .encryption import encrypt_api_key
+        except ImportError:
+            from core.encryption import encrypt_api_key
         
         db = get_db_session()
         try:

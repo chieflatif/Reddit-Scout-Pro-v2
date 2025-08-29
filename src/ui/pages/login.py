@@ -1,8 +1,13 @@
 """Login page for Reddit Scout Pro."""
 
 import streamlit as st
-from ...auth.auth_manager import AuthManager
-from ...auth.decorators import set_auth_state
+try:
+    from ...auth.auth_manager import AuthManager
+    from ...auth.decorators import set_auth_state
+except ImportError:
+    # Fallback for direct imports
+    from auth.auth_manager import AuthManager
+    from auth.decorators import set_auth_state
 
 def render_login_page():
     """Render the login page."""

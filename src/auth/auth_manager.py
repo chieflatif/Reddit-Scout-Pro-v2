@@ -5,8 +5,13 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Dict, Optional
 from sqlalchemy.orm import Session
-from ..database.models import User, Session as UserSession
-from ..database.database import get_db_session
+try:
+    from ..database.models import User, Session as UserSession
+    from ..database.database import get_db_session
+except ImportError:
+    # Fallback for direct imports
+    from database.models import User, Session as UserSession
+    from database.database import get_db_session
 import logging
 import re
 

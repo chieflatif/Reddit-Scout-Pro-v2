@@ -1,13 +1,11 @@
-# Core Streamlit and Reddit API
+# Local testing requirements (SQLite instead of PostgreSQL)
 streamlit>=1.46.0,<2.0.0
 praw>=7.8.0,<8.0.0
 prawcore>=2.4.0,<3.0.0
 
-# Database and ORM
+# Database and ORM (SQLite for local testing)
 sqlalchemy>=2.0.20,<3.0.0
 alembic>=1.13.0,<2.0.0
-psycopg2-binary>=2.9.0,<3.0.0 ; platform_system != "Darwin"
-psycopg2>=2.9.0,<3.0.0 ; platform_system == "Darwin"
 
 # Authentication and Security
 bcrypt>=4.1.0,<5.0.0
@@ -31,6 +29,3 @@ email-validator>=2.1.0,<3.0.0
 requests>=2.32.0,<3.0.0
 pydantic>=2.11.0,<3.0.0
 pydantic-settings>=2.10.0,<3.0.0
-
-# Production server (optional)
-gunicorn>=21.0.0,<22.0.0

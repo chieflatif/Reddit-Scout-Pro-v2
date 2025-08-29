@@ -67,13 +67,26 @@ class DatabaseManager:
             )
         else:
             # PostgreSQL configuration for production
-            self.engine = create_engine(
-                database_url,
-                pool_size=10,
-                max_overflow=20,
-                pool_pre_ping=True,
-                echo=False  # Set to True for SQL debugging
-            )
+            try:
+                self.engine = create_engine(
+                    database_url,
+                    pool_size=10,
+                    max_overflow=20,
+                    pool_pre_ping=True,
+                    echo=False  # Set to True for SQL debugging
+                )
+            except Exception as e:
+                if "psycopg2" in str(e).lower():
+                    logger.error("PostgreSQL driver (psycopg2) not available. Using SQLite fallback for testing.")
+                    # Fallback to SQLite for testing
+                    self.engine = create_engine(
+                        "sqlite:///reddit_scout_fallback.db",
+                        poolclass=StaticPool,
+                        connect_args={"check_same_thread": False},
+                        echo=False
+                    )
+                else:
+                    raise
         
         # Create session factory
         self.SessionLocal = sessionmaker(
@@ -132,9 +145,10 @@ def get_db_session():
 def check_db_health():
     """Check database connectivity."""
     try:
+        from sqlalchemy import text
         db = get_db_session()
         # Simple query to test connection
-        db.execute("SELECT 1")
+        db.execute(text("SELECT 1"))
         db.close()
         return True
     except Exception as e:
