@@ -13,13 +13,25 @@ def install_requirements():
     """Install required packages on Replit startup."""
     try:
         logger.info("Installing requirements...")
+        # Check if requirements are already installed
+        try:
+            import streamlit
+            import sqlalchemy
+            import bcrypt
+            import praw
+            logger.info("Requirements already installed, skipping installation")
+            return
+        except ImportError:
+            pass
+        
         subprocess.check_call([
-            sys.executable, "-m", "pip", "install", "-r", "requirements_multi_user.txt"
+            sys.executable, "-m", "pip", "install", "-r", "requirements_multi_user.txt", "--quiet"
         ])
         logger.info("Requirements installed successfully")
     except subprocess.CalledProcessError as e:
         logger.error(f"Failed to install requirements: {e}")
-        raise
+        # Don't raise - try to continue anyway
+        logger.warning("Continuing despite installation issues...")
 
 def setup_environment():
     """Set up environment variables and configuration."""
