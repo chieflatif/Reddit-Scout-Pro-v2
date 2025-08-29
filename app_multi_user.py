@@ -3,11 +3,23 @@
 import streamlit as st
 import logging
 import os
-from src.database.database import init_db, check_db_health
-from src.auth.decorators import init_auth_state, check_session_validity, clear_auth_state, logout_user
-from src.ui.pages.login import render_auth_page
-from src.ui.pages.api_keys import render_api_keys_page
-from src.core.encryption import test_encryption_system
+import sys
+from pathlib import Path
+
+# Add src to Python path for imports
+src_path = Path(__file__).parent / "src"
+sys.path.insert(0, str(src_path))
+
+try:
+    from database.database import init_db, check_db_health
+    from auth.decorators import init_auth_state, check_session_validity, clear_auth_state, logout_user
+    from ui.pages.login import render_auth_page
+    from ui.pages.api_keys import render_api_keys_page
+    from core.encryption import test_encryption_system
+except ImportError as e:
+    st.error(f"❌ Import error: {e}")
+    st.error("Please ensure all dependencies are installed and the src/ directory structure is correct.")
+    st.stop()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

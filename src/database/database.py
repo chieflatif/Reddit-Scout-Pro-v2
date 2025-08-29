@@ -21,10 +21,15 @@ class DatabaseManager:
     
     def _get_database_url(self) -> str:
         """Get database URL from environment variables."""
-        # Try Replit's standard DATABASE_URL first
+        # Try standard DATABASE_URL first (Render, Heroku, etc.)
         database_url = os.getenv('DATABASE_URL')
         
         if database_url:
+            # Fix postgres:// to postgresql:// if needed (Heroku compatibility)
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+                logger.info("Fixed postgres:// to postgresql:// in DATABASE_URL")
+            
             logger.info("Using DATABASE_URL from environment")
             return database_url
         

@@ -20,27 +20,43 @@ class APIKeyEncryption:
         encryption_key = os.getenv('ENCRYPTION_KEY')
         
         if not encryption_key:
-            # Generate a new key for development
+            # Generate a new key and warn
             key = Fernet.generate_key()
             encryption_key = key.decode()
-            logger.warning(f"No ENCRYPTION_KEY found in environment. Generated new key: {encryption_key}")
-            logger.warning("Add this to your Replit Secrets as ENCRYPTION_KEY")
-            print(f"\n🔑 IMPORTANT: Add this to your Replit Secrets:")
-            print(f"ENCRYPTION_KEY={encryption_key}\n")
+            logger.warning(f"No ENCRYPTION_KEY found in environment. Generated new key.")
+            logger.warning("Add this to your deployment platform's environment variables:")
+            logger.warning(f"ENCRYPTION_KEY={encryption_key}")
+            
+            # Set it in environment for this session
+            os.environ['ENCRYPTION_KEY'] = encryption_key
         
         try:
-            # Handle both string and bytes
+            # Validate key format
             if isinstance(encryption_key, str):
                 key_bytes = encryption_key.encode()
             else:
                 key_bytes = encryption_key
             
-            return Fernet(key_bytes)
+            # Test that it's a valid Fernet key
+            cipher = Fernet(key_bytes)
+            # Test encrypt/decrypt to ensure it works
+            test_data = b"test"
+            encrypted = cipher.encrypt(test_data)
+            decrypted = cipher.decrypt(encrypted)
+            if decrypted != test_data:
+                raise ValueError("Encryption test failed")
+            
+            logger.info("✅ Encryption system initialized successfully")
+            return cipher
+            
         except Exception as e:
             logger.error(f"Failed to initialize encryption cipher: {e}")
             # Generate a new key as fallback
             key = Fernet.generate_key()
-            logger.warning(f"Using fallback encryption key: {key.decode()}")
+            encryption_key = key.decode()
+            logger.warning(f"Using fallback encryption key. Set this in environment:")
+            logger.warning(f"ENCRYPTION_KEY={encryption_key}")
+            os.environ['ENCRYPTION_KEY'] = encryption_key
             return Fernet(key)
     
     def encrypt(self, plaintext: str) -> str:
