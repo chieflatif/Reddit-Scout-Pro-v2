@@ -2,7 +2,6 @@
 
 import streamlit as st
 from ...auth.decorators import require_auth, get_current_user
-from ...core.reddit_scout_multi import UserRedditScout
 from ...database.database import get_user_api_keys, upsert_user_api_keys
 
 @require_auth
@@ -16,14 +15,9 @@ def render_api_keys_page():
         st.error("Authentication error. Please log in again.")
         return
     
-    # Get current Reddit Scout instance
-    reddit_scout = st.session_state.get('reddit_scout')
-    if not reddit_scout:
-        reddit_scout = UserRedditScout(user['user_id'])
-        st.session_state.reddit_scout = reddit_scout
-    
-    # Check current configuration status
-    is_configured = reddit_scout.is_configured()
+    # Prefill from DB and check current configuration status
+    existing = get_user_api_keys(user['user_id'])
+    is_configured = bool(existing and existing.get('client_id') and existing.get('client_secret'))
     
     if is_configured:
         st.success("✅ Reddit API keys are configured and working!")
@@ -56,9 +50,6 @@ def render_api_keys_page():
         
         st.image("https://i.imgur.com/yNlEkWP.png", caption="Example of Reddit app creation", width=600)
     
-    # Prefill from DB
-    existing = get_user_api_keys(user['user_id'])
-
     # API Keys form
     st.markdown("### Configure Your API Keys")
 
@@ -124,8 +115,6 @@ def render_api_keys_page():
                         }
                     )
 
-                    # Refresh local instance
-                    st.session_state.reddit_scout = UserRedditScout(user['user_id'])
                     st.success("🎉 API keys saved successfully!")
                     st.balloons()
                     import time
@@ -142,17 +131,17 @@ def render_api_keys_page():
             if st.button("🔍 Test Reddit Connection", use_container_width=True):
                 with st.spinner("Testing connection..."):
                     try:
-                        # Test with a simple API call
-                        test_subreddit = reddit_scout.get_subreddit_info("python")
-                        if test_subreddit:
-                            st.success("✅ Connection test successful!")
-                            st.json({
-                                "subreddit": test_subreddit["name"],
-                                "subscribers": test_subreddit["subscribers"],
-                                "title": test_subreddit["title"]
-                            })
-                        else:
-                            st.error("❌ Connection test failed")
+                        import praw
+                        keys = existing or {}
+                        reddit = praw.Reddit(
+                            client_id=keys.get('client_id', ''),
+                            client_secret=keys.get('client_secret', ''),
+                            user_agent=keys.get('user_agent') or 'RedditScoutPro/1.0',
+                            username=keys.get('reddit_username') or None,
+                            password=keys.get('reddit_password') or None,
+                        )
+                        reddit.user.me()
+                        st.success("✅ Connection test successful!")
                     except Exception as e:
                         st.error(f"❌ Connection test failed: {str(e)}")
         
@@ -177,7 +166,6 @@ def render_api_keys_page():
                             "reddit_password": "",
                         }
                     )
-                    st.session_state.reddit_scout = UserRedditScout(user['user_id'])
                     st.session_state.confirm_delete = False
                     st.success("API keys removed successfully.")
                     st.rerun()

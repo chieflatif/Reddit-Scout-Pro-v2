@@ -102,6 +102,29 @@ def main():
         import src.reddit_scout as _rs
         importlib.reload(_cfg)
         importlib.reload(_rs)
+        # Patch RedditScout to avoid forcing user.me() (works with app-only creds)
+        try:
+            import praw
+            def _patched_setup(self):
+                try:
+                    self.reddit = praw.Reddit(
+                        client_id=_cfg.settings.reddit_client_id,
+                        client_secret=_cfg.settings.reddit_client_secret,
+                        user_agent=_cfg.settings.reddit_user_agent,
+                        username=_cfg.settings.reddit_username or None,
+                        password=_cfg.settings.reddit_password or None,
+                    )
+                except Exception:
+                    # Last resort: minimal client without creds (still allows some public reads)
+                    self.reddit = praw.Reddit(
+                        client_id=_cfg.settings.reddit_client_id or "",
+                        client_secret=_cfg.settings.reddit_client_secret or "",
+                        user_agent=_cfg.settings.reddit_user_agent or 'RedditScoutPro/1.0',
+                    )
+        
+            _rs.RedditScout._setup_reddit_client = _patched_setup
+        except Exception:
+            pass
         import src.dashboard as _dash
         importlib.reload(_dash)
         _dash.main()
