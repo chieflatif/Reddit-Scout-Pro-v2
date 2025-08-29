@@ -45,6 +45,35 @@ class APIKey(Base):
     def __repr__(self):
         return f"<APIKey(user_id={self.user_id}, client_id='{self.reddit_client_id[:10]}...')>"
 
+class UserAPIKey(Base):
+    """Per-user Reddit API keys (encrypted) for multi-user deployment.
+
+    NOTE: All sensitive fields must be stored encrypted using helpers in
+    `src/core/encryption.py`. Read operations must decrypt before returning to callers.
+    """
+    __tablename__ = 'user_api_keys'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+
+    # Encrypted fields (Fernet base64 strings)
+    client_id = Column(Text, nullable=True)
+    client_secret = Column(Text, nullable=True)
+    reddit_username = Column(Text, nullable=True)
+    reddit_password = Column(Text, nullable=True)
+
+    # User agent can be plaintext; default provided
+    user_agent = Column(String(150), default="RedditScoutPro/1.0", nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    # Optional relationship back to user
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<UserAPIKey(user_id={self.user_id})>"
+
 class Session(Base):
     """User session management for authentication."""
     __tablename__ = 'sessions'

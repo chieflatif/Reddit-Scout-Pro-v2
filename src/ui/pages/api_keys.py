@@ -2,7 +2,7 @@
 
 import streamlit as st
 from ...auth.decorators import require_auth, get_current_user
-from ...core.reddit_scout_multi import UserRedditScout
+from ...database.database import get_user_api_keys, upsert_user_api_keys
 
 @require_auth
 def render_api_keys_page():
@@ -15,14 +15,9 @@ def render_api_keys_page():
         st.error("Authentication error. Please log in again.")
         return
     
-    # Get current Reddit Scout instance
-    reddit_scout = st.session_state.get('reddit_scout')
-    if not reddit_scout:
-        reddit_scout = UserRedditScout(user['user_id'])
-        st.session_state.reddit_scout = reddit_scout
-    
-    # Check current configuration status
-    is_configured = reddit_scout.is_configured()
+    # Prefill from DB and check current configuration status
+    existing = get_user_api_keys(user['user_id'])
+    is_configured = bool(existing and existing.get('client_id') and existing.get('client_secret'))
     
     if is_configured:
         st.success("✅ Reddit API keys are configured and working!")
@@ -57,71 +52,74 @@ def render_api_keys_page():
     
     # API Keys form
     st.markdown("### Configure Your API Keys")
-    
+
     with st.form("api_keys_form"):
         col1, col2 = st.columns(2)
-        
+
         with col1:
             client_id = st.text_input(
                 "Reddit Client ID",
+                value=(existing.get('client_id') if existing else ""),
                 placeholder="Enter your Reddit Client ID",
                 help="The shorter string under 'personal use script'",
                 type="password"
             )
-        
+
         with col2:
             user_agent = st.text_input(
                 "User Agent (Optional)",
-                value="RedditScoutPro/2.0",
+                value=(existing.get('user_agent') if existing and existing.get('user_agent') else "RedditScoutPro/1.0"),
                 help="Identifies your app to Reddit's API"
             )
-        
+
         client_secret = st.text_input(
             "Reddit Client Secret",
+            value=(existing.get('client_secret') if existing else ""),
             placeholder="Enter your Reddit Client Secret",
             help="The longer 'secret' string from your Reddit app",
             type="password"
         )
-        
+
+        reddit_username = st.text_input(
+            "Reddit Username (Optional)",
+            value=(existing.get('reddit_username') if existing else ""),
+            placeholder="Enter Reddit username if using password auth",
+        )
+
+        reddit_password = st.text_input(
+            "Reddit Password (Optional)",
+            value=(existing.get('reddit_password') if existing else ""),
+            type="password",
+            placeholder="Enter Reddit password if using password auth",
+        )
+
         submit_button = st.form_submit_button(
-            "Save & Test API Keys",
+            "Save API Keys",
             use_container_width=True,
             type="primary"
         )
-        
+
         if submit_button:
             if not client_id or not client_secret:
                 st.error("Please provide both Client ID and Client Secret.")
             else:
-                with st.spinner("Testing and saving your API keys..."):
-                    result = reddit_scout.update_api_keys(
-                        client_id=client_id.strip(),
-                        client_secret=client_secret.strip(),
-                        user_agent=user_agent.strip() if user_agent else None
+                with st.spinner("Saving your API keys..."):
+                    upsert_user_api_keys(
+                        user_id=user['user_id'],
+                        payload={
+                            "client_id": client_id.strip(),
+                            "client_secret": client_secret.strip(),
+                            "user_agent": (user_agent.strip() if user_agent else "RedditScoutPro/1.0"),
+                            "reddit_username": reddit_username.strip() if reddit_username else "",
+                            "reddit_password": reddit_password.strip() if reddit_password else "",
+                        }
                     )
-                    
-                    if result["success"]:
-                        st.success("🎉 API keys saved and validated successfully!")
-                        st.balloons()
-                        
-                        # Update session state
-                        st.session_state.reddit_scout = reddit_scout
-                        
-                        # Show next steps
-                        st.info("🚀 You're all set! You can now explore Reddit data using the navigation menu.")
-                        
-                        # Auto-redirect to dashboard after a delay
-                        import time
-                        time.sleep(2)
-                        st.rerun()
-                    else:
-                        st.error(f"❌ {result['message']}")
-                        st.markdown("""
-                        **Common Issues:**
-                        - Double-check your Client ID and Secret
-                        - Make sure you selected "script" as app type
-                        - Verify the app is active in your Reddit preferences
-                        """)
+
+                    st.success("🎉 API keys saved successfully!")
+                    st.balloons()
+                    import time
+                    time.sleep(1)
+                    st.rerun()
     
     # Test connection section
     if is_configured:
@@ -133,17 +131,17 @@ def render_api_keys_page():
             if st.button("🔍 Test Reddit Connection", use_container_width=True):
                 with st.spinner("Testing connection..."):
                     try:
-                        # Test with a simple API call
-                        test_subreddit = reddit_scout.get_subreddit_info("python")
-                        if test_subreddit:
-                            st.success("✅ Connection test successful!")
-                            st.json({
-                                "subreddit": test_subreddit["name"],
-                                "subscribers": test_subreddit["subscribers"],
-                                "title": test_subreddit["title"]
-                            })
-                        else:
-                            st.error("❌ Connection test failed")
+                        import praw
+                        keys = existing or {}
+                        reddit = praw.Reddit(
+                            client_id=keys.get('client_id', ''),
+                            client_secret=keys.get('client_secret', ''),
+                            user_agent=keys.get('user_agent') or 'RedditScoutPro/1.0',
+                            username=keys.get('reddit_username') or None,
+                            password=keys.get('reddit_password') or None,
+                        )
+                        reddit.user.me()
+                        st.success("✅ Connection test successful!")
                     except Exception as e:
                         st.error(f"❌ Connection test failed: {str(e)}")
         
@@ -158,9 +156,16 @@ def render_api_keys_page():
             
             with col1:
                 if st.button("Yes, Remove", type="primary"):
-                    # Clear API keys
-                    result = reddit_scout.update_api_keys("", "", "")
-                    st.session_state.reddit_scout = UserRedditScout(user['user_id'])
+                    upsert_user_api_keys(
+                        user_id=user['user_id'],
+                        payload={
+                            "client_id": "",
+                            "client_secret": "",
+                            "user_agent": existing.get('user_agent') if existing else "RedditScoutPro/1.0",
+                            "reddit_username": "",
+                            "reddit_password": "",
+                        }
+                    )
                     st.session_state.confirm_delete = False
                     st.success("API keys removed successfully.")
                     st.rerun()

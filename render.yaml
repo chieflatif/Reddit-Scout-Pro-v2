@@ -3,7 +3,7 @@ services:
     name: reddit-scout-pro-community
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python start.py
+    startCommand: streamlit run app.py --server.port=$PORT --server.headless=true
     envVars:
       - key: DATABASE_URL
         fromDatabase:
@@ -12,7 +12,8 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: ENCRYPTION_KEY
-        generateValue: true
+        # paste a Fernet key generated once locally; do NOT rotate casually
+        value: REPLACE_WITH_FERNET_KEY
       - key: PYTHONPATH
         value: /opt/render/project/src
       - key: STREAMLIT_SERVER_HEADLESS

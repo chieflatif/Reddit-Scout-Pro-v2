@@ -4,7 +4,7 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
-from .models import Base
+from .models import Base, UserAPIKey
 import logging
 
 # Configure logging
@@ -154,3 +154,77 @@ def check_db_health():
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
         return False
+
+# ------------------------------------------------------------
+# User API Keys CRUD (Phase 3)
+# ------------------------------------------------------------
+from typing import Optional, Dict
+from ..core.encryption import encrypt_api_key, decrypt_api_key
+
+def get_user_api_keys(user_id: int) -> Optional[Dict[str, Optional[str]]]:
+    """Return latest per-user Reddit API keys decrypted.
+
+    Returns a dict with keys: client_id, client_secret, user_agent,
+    reddit_username, reddit_password; or None if not found.
+    """
+    db = get_db_session()
+    try:
+        record = (
+            db.query(UserAPIKey)
+            .filter(UserAPIKey.user_id == user_id)
+            .order_by(UserAPIKey.updated_at.desc())
+            .first()
+        )
+        if not record:
+            return None
+
+        # Decrypt sensitive fields; never log decrypted values
+        return {
+            "client_id": decrypt_api_key(record.client_id) if record.client_id else "",
+            "client_secret": decrypt_api_key(record.client_secret) if record.client_secret else "",
+            "user_agent": record.user_agent or "RedditScoutPro/1.0",
+            "reddit_username": decrypt_api_key(record.reddit_username) if record.reddit_username else "",
+            "reddit_password": decrypt_api_key(record.reddit_password) if record.reddit_password else "",
+        }
+    except Exception:
+        # Do not leak secrets in logs
+        return None
+    finally:
+        db.close()
+
+def upsert_user_api_keys(user_id: int, payload: Dict[str, Optional[str]]) -> None:
+    """Insert or update per-user Reddit API keys.
+
+    Encrypt non-empty sensitive fields on write. Required fields: client_id, client_secret.
+    """
+    db = get_db_session()
+    try:
+        record = (
+            db.query(UserAPIKey)
+            .filter(UserAPIKey.user_id == user_id)
+            .order_by(UserAPIKey.updated_at.desc())
+            .first()
+        )
+        if not record:
+            record = UserAPIKey(user_id=user_id)
+            db.add(record)
+
+        # Encrypt on write; allow empty strings to clear values
+        client_id_val = payload.get("client_id") or ""
+        client_secret_val = payload.get("client_secret") or ""
+        user_agent_val = payload.get("user_agent") or "RedditScoutPro/1.0"
+        reddit_username_val = payload.get("reddit_username") or ""
+        reddit_password_val = payload.get("reddit_password") or ""
+
+        record.client_id = encrypt_api_key(client_id_val) if client_id_val else ""
+        record.client_secret = encrypt_api_key(client_secret_val) if client_secret_val else ""
+        record.user_agent = user_agent_val
+        record.reddit_username = encrypt_api_key(reddit_username_val) if reddit_username_val else ""
+        record.reddit_password = encrypt_api_key(reddit_password_val) if reddit_password_val else ""
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()

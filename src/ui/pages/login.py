@@ -51,8 +51,8 @@ def render_login_page():
                         result = auth.login_user(
                             username=username.strip(),
                             password=password,
-                            user_agent=st.context.headers.get("User-Agent"),
-                            ip_address=st.context.headers.get("X-Forwarded-For")
+                            user_agent=None,
+                            ip_address=None
                         )
                         
                         if result["success"]:

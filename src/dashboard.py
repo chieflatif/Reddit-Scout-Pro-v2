@@ -10,6 +10,8 @@ import time
 
 from .reddit_scout import RedditScout
 from .config import settings
+import os
+from .database.database import get_user_api_keys
 
 
 class RedditDashboard:
@@ -77,6 +79,37 @@ class RedditDashboard:
     
     def _initialize_scout(self):
         """Initialize Reddit Scout with caching."""
+        # Load per-user keys before constructing scout
+        if st.session_state.get('authenticated') and st.session_state.get('user_id'):
+            try:
+                user_id = st.session_state.user_id
+                keys = get_user_api_keys(user_id)
+                if keys:
+                    # Set env vars (no values logged)
+                    os.environ['REDDIT_CLIENT_ID'] = keys.get('client_id') or ''
+                    os.environ['REDDIT_CLIENT_SECRET'] = keys.get('client_secret') or ''
+                    os.environ['REDDIT_USER_AGENT'] = keys.get('user_agent') or 'RedditScoutPro/1.0'
+                    if keys.get('reddit_username'):
+                        os.environ['REDDIT_USERNAME'] = keys['reddit_username']
+                    else:
+                        os.environ.pop('REDDIT_USERNAME', None)
+                    if keys.get('reddit_password'):
+                        os.environ['REDDIT_PASSWORD'] = keys['reddit_password']
+                    else:
+                        os.environ.pop('REDDIT_PASSWORD', None)
+
+                    # Hydrate settings in-place to ensure RedditScout sees them
+                    try:
+                        settings.reddit_client_id = os.environ.get('REDDIT_CLIENT_ID', '')
+                        settings.reddit_client_secret = os.environ.get('REDDIT_CLIENT_SECRET', '')
+                        settings.reddit_user_agent = os.environ.get('REDDIT_USER_AGENT', 'RedditScoutPro/1.0')
+                        settings.reddit_username = os.environ.get('REDDIT_USERNAME', '')
+                        settings.reddit_password = os.environ.get('REDDIT_PASSWORD', '')
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
         if 'reddit_scout' not in st.session_state:
             with st.spinner("Initializing Reddit API connection..."):
                 try:
