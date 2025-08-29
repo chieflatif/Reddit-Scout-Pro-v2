@@ -2,6 +2,7 @@
 
 import streamlit as st
 import logging
+import os
 from src.database.database import init_db, check_db_health
 from src.auth.decorators import init_auth_state, check_session_validity, clear_auth_state, logout_user
 from src.ui.pages.login import render_auth_page
@@ -281,7 +282,8 @@ def main():
         render_main_content(selected_page)
         
         # Health check in footer (for development)
-        if st.secrets.get("DEBUG", False):
+        debug_mode = os.getenv("DEBUG", "false").lower() == "true"
+        if debug_mode:
             with st.expander("🔧 System Status", expanded=False):
                 db_healthy = check_db_health()
                 st.write(f"Database: {'✅ Healthy' if db_healthy else '❌ Error'}")
@@ -290,7 +292,7 @@ def main():
     except Exception as e:
         logger.error(f"Application error: {e}")
         st.error("❌ An unexpected error occurred. Please refresh the page.")
-        if st.secrets.get("DEBUG", False):
+        if debug_mode:
             st.exception(e)
 
 if __name__ == "__main__":
