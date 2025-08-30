@@ -1,0 +1,32 @@
+# Reddit Scout Pro MULTI-USER - Render Environment Variables
+# Copy these key-value pairs into Render's Environment Variables section
+
+# DATABASE (Render will provide DATABASE_URL automatically)
+DATABASE_URL=postgresql://user:password@host:port/database
+SECRET_KEY=your-super-secret-key-change-this-in-production
+ENCRYPTION_KEY=generate-this-with-fernet-key
+
+# Streamlit Configuration for Render
+STREAMLIT_SERVER_HEADLESS=true
+STREAMLIT_SERVER_ENABLE_CORS=false
+STREAMLIT_SERVER_PORT=8501
+
+# Application Settings
+APP_TITLE=Reddit Scout Pro - Multi-User
+ENVIRONMENT=production
+DEBUG=false
+
+# Content Filtering (Optional)
+MIN_SCORE_THRESHOLD=5
+MIN_COMMENTS_THRESHOLD=3
+EXCLUDE_NSFW=true
+EXCLUDE_SPOILERS=true
+
+# Search Configuration (Optional)
+DEFAULT_TIME_FILTER=week
+MAX_POSTS_PER_REQUEST=100
+
+# Analytics (Optional)
+SENTIMENT_ANALYSIS_ENABLED=true
+WORDCLOUD_ENABLED=true
+ENGAGEMENT_METRICS_ENABLED=true

@@ -17,6 +17,29 @@ from src.ui.pages.login import render_auth_page
 from src.database.database import get_user_api_keys
 
 
+def _clear_reddit_env_and_settings() -> None:
+    """Remove any global Reddit credentials from process env and settings."""
+    try:
+        for k in [
+            'REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET', 'REDDIT_USER_AGENT',
+            'REDDIT_USERNAME', 'REDDIT_PASSWORD'
+        ]:
+            if k in os.environ:
+                del os.environ[k]
+
+        # Also clear settings to avoid stale values from first import
+        try:
+            import src.config as _cfg
+            _cfg.settings.reddit_client_id = ''
+            _cfg.settings.reddit_client_secret = ''
+            _cfg.settings.reddit_user_agent = 'RedditScoutPro/1.0'
+            _cfg.settings.reddit_username = ''
+            _cfg.settings.reddit_password = ''
+        except Exception:
+            pass
+    except Exception:
+        pass
+
 def load_user_keys_into_env(user_id: int) -> None:
     """Load the logged-in user's Reddit API keys into environment variables.
 
@@ -57,12 +80,17 @@ def load_user_keys_into_env(user_id: int) -> None:
 
 
 def main():
+    # Always clear any global Reddit creds before doing anything
+    _clear_reddit_env_and_settings()
+
     # Initialize DB and auth state
     init_db()
     init_auth_state()
 
     # Not authenticated → show login/register
     if not st.session_state.get('authenticated'):
+        # Keep environment clean when unauthenticated
+        _clear_reddit_env_and_settings()
         render_auth_page()
         return
 

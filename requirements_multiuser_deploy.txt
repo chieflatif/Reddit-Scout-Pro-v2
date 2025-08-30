@@ -1,0 +1,31 @@
+# Multi-User Reddit Scout Pro - Production Requirements
+
+# Core Streamlit and Reddit API
+streamlit>=1.47.0
+praw>=7.7.1
+pandas>=2.3.1
+plotly>=5.24.1
+requests>=2.32.3
+python-dotenv>=1.0.1
+
+# Authentication and Security
+bcrypt>=4.1.0
+cryptography>=41.0.0
+python-jose>=3.3.0
+
+# Database and ORM
+sqlalchemy>=2.0.20
+alembic>=1.13.0
+psycopg2-binary>=2.9.0
+
+# Text Analysis and NLP
+textblob>=0.18.0
+langdetect>=1.0.9
+wordcloud>=1.9.3
+nltk>=3.9.0
+
+# Utilities
+pydantic>=2.11.0
+pydantic-settings>=2.10.0
+email-validator>=2.1.0
+pytz>=2024.1

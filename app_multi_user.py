@@ -6,6 +6,10 @@ import os
 import sys
 from pathlib import Path
 
+# Configure logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Add src to Python path for imports
 src_path = Path(__file__).parent / "src"
 sys.path.insert(0, str(src_path))
@@ -16,14 +20,11 @@ try:
     from ui.pages.login import render_auth_page
     from ui.pages.api_keys import render_api_keys_page
     from core.encryption import test_encryption_system
+    logger.info("All imports successful")
 except ImportError as e:
     st.error(f"❌ Import error: {e}")
     st.error("Please ensure all dependencies are installed and the src/ directory structure is correct.")
     st.stop()
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def setup_page_config():
     """Configure Streamlit page settings."""
@@ -273,6 +274,9 @@ def render_settings():
 
 def main():
     """Main application entry point."""
+    # Set debug mode at the start so it's available in exception handler
+    debug_mode = os.getenv("DEBUG", "false").lower() == "true"
+    
     try:
         # Setup page configuration
         setup_page_config()
@@ -294,7 +298,6 @@ def main():
         render_main_content(selected_page)
         
         # Health check in footer (for development)
-        debug_mode = os.getenv("DEBUG", "false").lower() == "true"
         if debug_mode:
             with st.expander("🔧 System Status", expanded=False):
                 db_healthy = check_db_health()
