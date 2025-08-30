@@ -15,6 +15,7 @@ from src.database.database import init_db
 from src.auth.decorators import init_auth_state, logout_user
 from src.ui.pages.login import render_auth_page
 from src.database.database import get_user_api_keys
+from src.ui.pages.api_keys import render_api_keys_page
 
 
 def _clear_reddit_env_and_settings() -> None:
@@ -106,6 +107,13 @@ def main():
     user_id = st.session_state.get('user_id')
     if user_id:
         load_user_keys_into_env(user_id)
+
+    # If user has no saved keys yet, show API Keys setup page first
+    user_keys = get_user_api_keys(user_id) if user_id else None
+    if not user_keys or not (user_keys.get('client_id') and user_keys.get('client_secret')):
+        st.info("Please configure your Reddit API keys to continue.")
+        render_api_keys_page()
+        return
 
     # Ensure dashboard constructs its own RedditScout (remove any prior multi-user instance)
     if 'reddit_scout' in st.session_state:
